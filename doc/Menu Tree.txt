@@ -1,0 +1,306 @@
+
+How to create a simple menu on FreRTOS ?
+
+Been there, done that, what did you want to know?
+I used one thread for the LCD control, blocking on a queue so I could send lcd commands from the rest of the system without blocking while the lcd updated.
+I used a second thread to run a 10ms keyboard read routine which did typematic rate and put the keypresses into a keyboard queue, the state machine for this is not hard.
+Finally the menu thread blocked on the keyboard and did the usual state machine thing to parse the input and update the displays and system state as appropriate.
+Nothing to it really, once you have the LCD and keyboard routines working correctly.
+Regard, Dan.
+
+самонастройку и запись конфигурации по умолчанию при первом включении;
+- подсчет и хранение количества включений;
+- подсчет и хранение времени работы с момента включения;
+- подсчет и хранение времени «жизни» устройства (ресурса);
+-регистрацию всех конфигурационных изменений (записывается код измененного
+параметра, время изменения этого параметра и новое значение параметра);
+- подсчет и хранение количества перезаписей конфигурации;
+- подсчет числа поступивших импульсов (за время «жизни» устройства);
+- взвешивание импульсов (умножение на К-фактор).
+Коэффициент рассчитывается динамически в зависимости от заданных 8 опорных
+точек по линейной функции, возможно использовать любое количество точек от 1 до 8;
+- выдачу на частотно-импульсные выходы сигналов, соответствующих взвешенным
+импульсам;
+- хранение настроек (конфигурации) в энергонезависимой памяти;
+- хранение количества импульсов за время "жизни" (необнуляемый сумматор);
+- хранение количества взвешенных импульсов (необнуляемый сумматор);
+- хранение количества взвешенных импульсов за определенный период (обнуляемый
+сумматор);
+- обеспечение доступа к внутренней информации и настройкам при помощи цифрового
+интерфейса (канала связи);
+- диагностику и хранение параметров внутренних ошибок и неисправностей;
+- присвоение и сохранение индивидуального номера в составе системы;
+- контроль внутренней температуры. Данные в формате FLOAT.
+1.4.7 ДИ-О-5 имеют настраиваемые параметры (конфигурирование):
+- разрешенное количество обратных импульсов;
+- выбор К-фактора (табличный);
+- установку значений соответствия частот и коэффициентов (в таблицах);
+- установку параметров интерфейса связи;
+- установку двухканального или одноканального типа работы;
+- установку инверсии выходных импульсов.
+1.4.8 Время хранения данных в энергонезависимой памяти не менее 10 лет.
+1.4.9 ДИ-О-5 имеют неизменяемый уникальный идентификационный номер.
+1.4.10 ДИ-О-5 обеспечивают смену базового программного обеспечения по
+интерфейсу связи под управлением компьютерной программы "Универсальный
+программатор оборудования" 
+
+
+1.4.4 Режимы работы счетчика
+1.4.4.1 Счетчик является многофункциональным измерительным прибором, все
+функции которого реализованы посредством соответствующих режимов работы.
+1.4.4.2 Счетчик может работать в трех режимах: «ИЗМЕРЕНИЕ»,
+«ПРОГРАММИРОВАНИЕ» и «ДОЗИРОВКА».
+1.4.4.3 Функционирование счетчика начинается после подачи на него питания.
+1.4.4.3 После подачи питания счетчик переходит в основной режим ро-
+боты «ИЗМЕРЕНИЕ», имеющее два состояния отображения информации, приведены
+Рисунки 3.1–3.2.
+Рисунок 3.1 – Индикация расхода и объема
+Рисунок 3.2 – Индикация суммарного объема
+Q – текущий расход жидкости в трубопроводе;
+V – объем, прошедший с начала измерения.
+
+Также в режиме «ИЗМЕРЕНИЯ» возможен сброс текущего накопления.
+ного объема. Реализованы три варианта сброса:
+1. Одновременно нажать и отпустить кнопки и .
+2. Нажмите и удерживайте кнопку 10 секунд.
+3. При выключенном режиме работы дозатора подать кратковременный
+сигнал входа сухого контакта (DI).
+Суммарный объем сбрасывается через меню.
+1.4.4.4 С помощью кнопок и можно переключать различные режимы ви-
+Добро пожаловать в основном меню.
+
+
+
+2. Аналоговый выход по току.
+3. Режим дозатора.
+4. Направление потока.
+5. Зона нечувствительности.
+6. Сброс показаний счетчика.
+7. Настройка RS485.
+8. Дата и время.
+9. Счетчик общего рабочего времени.
+10. Настройка дисплея.
+11. Смена пароля.
+12. Заводские настройки (начальные настройки завода-из-
+13. Информация о приборе.
+14. Настройка языка меню.
+15. Журнал сообщений.
+
+
+	Menu
+
+Setting Up the Meter
+
+	Selecting Input Type 
+		
+		NPN - Internal pull-up resistor on S+ for NPN inputs
+		Reed - Internal pull-up resistor
+		Coil - Magnetic coil flowmeter inputs
+
+	Entering the K-Factor
+		
+		K-Factor Units (liters, meters cubed, ml)
+		K-Factor Decimal Point 
+		K-Factor Value
+	
+	Display Units
+		
+		Setting the Time Base (sec, min, hour, day)
+		Setting the Rate Display Units (liters, meters cubed, ml)
+		Total Units (liters, meters cubed, ml)
+			Multipier (x1, x100, x1000, x1000000)
+		Grand Total Units (liters, meters cubed, ml)
+			Multipier (x1, x100, x1000, x1000000)
+		
+	decimal point - Rate and total decimal point position
+		
+		Rate decimal point
+		Total decimal point
+		Grand total decimal point
+
+	display - Select what will appear on the lower display
+		
+		Top Display (rate, total)
+			Rate
+			Total
+		Bottom Display
+			Toggle 
+        	The bottom display can be programmed to display the following information.
+        	1. Total
+        	2. Alternating total and total units
+        	3. Alternating total and custom tag
+        	4. Alternating total, total units, and rate units
+        	5. Grand total
+        	6. Alternating grand total and grand total units
+        	7. Alternating grand total and custom tag
+        	8. Alternating grant total, grand total units, and rate units
+        	9. Rate
+        	10. Alternating rate and total units
+        	11. Alternating rate and rate units
+        	12. Alternating rate and custom tag
+        	13. Rate units
+        	14. Total units
+        	15. Custom tag
+        	16. Off (blank)
+	
+Advanced Features menu
+
+	Open collector output configuration (OUTPUT) - Setup open collector outputs Out 1, Out2, Out3
+		
+		Output 1 - Assign function of open collector output 1
+			Off
+			Pulse Output (rate, total, grand total, retransmit, quadrature, test) - Set Out for pulse output mode
+				Rate Pulse Output - Assign pulse output to rate
+					Decimal point - Set K-factor decimal point
+					Count - Set K-factor
+				Total Pulse Output - Assign pulse output to total
+					Decimal point -S et K-factor decimal point
+					Count - Set K-factor
+				Grand Total Pulse Output - Assign pulse output to grand total
+					Decimal point - Set K-factor decimal point
+					Count - Set K-factor
+				Retransmit Output - Assign pulse output to retransmit
+				Quadrature Output - Assign pulse output to quadrature
+				Test Output - Assign pulse output to test mode
+					Frequency
+					Pulses 
+			
+			Alarm Output (rate, total, grand total, on, off) - Assign Out for alarm output mode
+				Rate Alarm - Assign alarm output to rate
+					Rate Set point - Set rate alarm set point
+					Rate Reset point - Set rate alarm reset point
+				Total Alarm - Assign alarm output to total
+					Set point - Set total alarm set point
+				Grand Total Alarm - Assign alarm output to grand total
+					Set point - Set grand total alarm set point
+				Force On State - Set output to on state
+				Force Off State - Set output to off state
+
+			Timer Output - Set Out for timed pulse output mode
+				Delay - Set the time of one period (seconds)
+				On Time - Set the active low pulse width
+				Start - begin outputting the constant timed pulse
+				Stop - end outputting the constant timed pulse
+
+			Total Reset Output - generates a pulse whenever the selected total is reset
+				Total
+					On Time - This is the amount of time the open collector output will remain on after the total  has been reset 
+				Grand Total
+					On Time - This is the amount of time the open collector output will remain on after grand total has been reset 
+					
+		Output 2 - Assign function of open collector output 2
+			(...)
+		Output 3 - Assign function of open collector output 3
+			(...)
+
+	Analog Output - Enter Analog Output menu
+		Source - Set analog output reference variable
+			Process Variable 1 - Set PV as analog output source, can select any active PV (1-16)
+			Display 1 - Output display 1 value
+			(...)
+			Rate Output - Set rate as output variable
+			Total Output - Set total as output variable
+			Grand Total Output - Set grand total as output variable
+			Disable - Turn off the analog output
+
+	Gate function for low speed inputs (GATE)
+		Low Gate - Set Low Gate
+		High Gate - Set High Gate
+	
+	Contact Debounce Filter - Enter Filter menu
+		High speed filter - Set high speed filter
+		Medium speed filter - Set medium speed filter
+		Low speed filter - Set low speed filter
+	
+	Low-Flow Cutoff - Enter Low-Low Cutoff menu
+		The cutoff value may be programmed from 0 to 9999.9. Below the cutoff value, the meter 
+		will display zero. Programming the cutoff value to zero disables the cutoff feature.
+
+	Scale or live calibrate the meter and override k-factor (SCALCAL) - Enter the Scale & Calibrate menu to program without using a k-factor
+		Scale - Enter the Scale menu
+			Undo K-factor ? - Undo the K-Factor input programming
+			Undo scaling & calibration ? - Undo the scaling and calibration input programming
+			Number of points (1-32) - Enter number of linearization points.
+			Scale Units - Selecting the scale display units allows the meter to perform automatic unit conversions
+			Pulse Input Time Unit - For example, if the display values are being entered in gallons/second the time unit would be set to seconds
+			Input 1 - pulses/sec (frequency) - Calibrate or scale input 1 value
+			Display 1 - corresponding display value for that input in the time unit selected - Program display 1 value
+			Input (1...32)
+			Display (1...32)
+			Save - Save entered calibration or scale parameters
+
+		Calibrating the Meter  - Enter the Calibrate menu
+			(...)
+
+	Total reset - Select method of total and grand total reset (T RESET)
+		Total reset - Select the Total Reset method
+			Manual - Manual total reset
+				Enable - Enable manual reset
+				Disable - Disable manual reset
+			Automatic - Automatic total reset
+				Time delay - Automatic reset time delay in seconds
+			Total Reset Time - Enter the time of day to reset the total hh.mm (Default: 00.00 midnight)
+				Time hh.mm
+		Grand total reset  Select the Grand Total Reset method
+			(...)
+
+		Set Clock  Message indicates that the clock must be set. Go to Advance – System – Set Time
+
+	Set passwords (PASSWRD)
+		Password - Program password to lock meter parameters
+		Password total -  Program password to prevent total reset
+		Password grand total - Enter password to permanently lock out
+			grandtotal related parameters and reset
+
+		Unlock - Password has been unlocked
+		Lock - Password has been locked
+		Unlocked - Program password to lock meter
+		Locked - Enter password to unlock meter
+
+System - Enter the System menu for meter settings and data logging (SYSTEM)
+
+		Set time - Set real-time clock date and time
+			HH:MM Time - Set the hour and minute
+			DD/MM/YY Day/Month/Year/ - Set the date
+	
+	Data Log Setup - The meter may contain up to 1024 records, each containing date, time, rate, total, grand total, and log number
+		
+		Log time - Set daily data log times
+			Log 1 - Set first daily log time 
+			Disable Log 1
+			Log 2 - Set second daily log time
+			Disable Log 2
+			Log 3 - Set third daily log time
+			Disable Log 4
+			Log 4 - Set fourth daily log time
+			Disable Log 4
+
+		Interval - Set interval log time
+			Interval Time
+			Start - Begin interval logging
+		Log view - View data log
+			All log view - View all data log points
+			Log number - Go to specific log number
+			All erase - Erase all logs
+
+	Backlight - Enable or disable backlight
+		Backlight - on/off
+		Timeout - Timeout to off backlight
+
+	Backup - Enter Backup menu
+		Save? - Save current parameters to backup restore
+		Load? - Load parameters from backup restore
+		Default - Restore factory default parameter settings
+
+	Configure serial communication settings (COMM) – communication via the RS-485 connection and Modbus
+		Modbus - ID 1..247
+		Baud Rate - 1200...115200
+		Parity - odd, even, 1 stop, 2 stop
+		Transmit Delay Time - delay may be set between 0 and 199 ms
+		
+	Analog output calibration - (AO CAL) - This feature is only used at the factory for diagnostic purposes.
+		
+	Info - Enter Info menu
+		Software - Display software ID number
+		Version - Display software version number
+		Model - Display model number
