@@ -70,7 +70,8 @@ volatile uint32_t g_pulses3;
 TimerHandle_t xTimerBeep;
 TimerHandle_t xTimerPulse0;
 TimerHandle_t xTimerPulse1;
-TimerHandle_t xTimerPhase;
+TimerHandle_t xTimerPhase0;
+TimerHandle_t xTimerPhase1;
 
 static void TaskPollButton(void *pvParameters);
 static void TaskModbus(void *pvParameters);
@@ -79,9 +80,11 @@ static void deadBeef(void);
 
 void prvBeepEnable(BaseType_t tone, uint16_t duration);
 void prvBeepDisable(TimerHandle_t xTimer);
+
 void prvPulse0Callback(TimerHandle_t xTimer);
 void prvPulse1Callback(TimerHandle_t xTimer);
-void prvPhaseCallback(TimerHandle_t xTimer);
+void prvPhase0Callback(TimerHandle_t xTimer);
+void prvPhase1Callback(TimerHandle_t xTimer);
 
 void meterScreen();
 
@@ -98,8 +101,6 @@ int main(void)
 
     lcd_init(LCD_DISP_ON);
     OBInit();
-    modbusSetAddress(1);
-    modbusInit();
 
     lcd_gotoxy(0, 0);
     lcd_puts_p(PSTR("Green Board\n"));
@@ -108,11 +109,6 @@ int main(void)
     lcd_Printf_P(PSTR("Free Heap Size: %u"), xPortGetFreeHeapSize());
     _delay_ms(1000);
     lcd_clrscr();
-
-    inputRegisters[0] = 12345;
-    inputRegisters[1] = 23456;
-    inputRegisters[2] = 11111;
-    inputRegisters[3] = 22222;
 
     /* create the event group. */
     // xFlagsEventGroup = xEventGroupCreate();
@@ -124,11 +120,11 @@ int main(void)
     xTimerBeep = xTimerCreate(PSTR("Beep"), pdMS_TO_TICKS(10), pdFALSE, 0, prvBeepDisable);
     xTimerPulse0 = xTimerCreate(PSTR("Pulse0"), pdMS_TO_TICKS(10), pdFALSE, 0, prvPulse0Callback);
     xTimerPulse1 = xTimerCreate(PSTR("Pulse1"), pdMS_TO_TICKS(10), pdFALSE, 0, prvPulse1Callback);
-    xTimerPhase = xTimerCreate(PSTR("Phase"), pdMS_TO_TICKS(10), pdFALSE, 0, prvPhaseCallback);
+    xTimerPhase0 = xTimerCreate(PSTR("Phase0"), pdMS_TO_TICKS(10), pdFALSE, 0, prvPhase0Callback);
+    xTimerPhase1 = xTimerCreate(PSTR("Phase1"), pdMS_TO_TICKS(10), pdFALSE, 0, prvPhase1Callback);
 
     xTaskCreate(TaskPollButton, (const char *)"PollButton", 256, NULL, 2, NULL); // Tested 9 free @ 208
-    // xTaskCreate(TaskMeter, (const char *)"Count", 256, NULL, 1, NULL);           // Tested 9 free @ 208
-    // xTaskCreate(TaskModbus, (const char *)"TaskModbus", 256, NULL, 1, NULL); // Tested 9 free @ 208
+    // xTaskCreate(TaskModbus, (const char *)"TaskModbus", 256, NULL, 1, NULL);     // Tested 9 free @ 208
 
     vTaskStartScheduler();
     deadBeef();
@@ -136,85 +132,80 @@ int main(void)
 /*-----------------------------------------------------------*/
 static void TaskPollButton(void *pvParameters)
 {
+    TickType_t last_wake_time;
+    // Set toggle interval to 50ms
+    const TickType_t toggle_interval = pdMS_TO_TICKS(20);
+
     uint8_t key_cancel;
     uint8_t key_enter;
     uint8_t key_down;
     uint8_t key_up;
-    TickType_t PERIOD;
+#define PERIOD pdMS_TO_TICKS(10)
 
-#define PERIOD pdMS_TO_TICKS(100)
     for (;;)
     {
-        // GPTOGGLE(GPE5);
+
         key_cancel = OBtick(!GPREAD(GPC0), 0); // cancel
         key_enter = OBtick(!GPREAD(GPC1), 1);  // enter
         key_down = OBtick(!GPREAD(GPC2), 2);   // down
         key_up = OBtick(!GPREAD(GPC3), 3);     // up
+
+        /* if (key_up == OB_CLICK || key_up == OB_DURINGLONGPRESS)
+        {
+            OCR1C++;
+        }
+
+        if (key_down == OB_CLICK || key_down == OB_DURINGLONGPRESS)
+        {
+            OCR1C--;
+        } */
 
         if (key_cancel == OB_LONGPRESSSTART)
         {
             prvBeepEnable(0x30, 50);
             g_pulses0 = 0;
             g_pulses1 = 0;
+            g_pulses2 = 0;
         }
-
-        if (key_up == OB_CLICK)
+        if (key_up == OB_CLICK || key_up == OB_DURINGLONGPRESS)
         {
-            prvBeepEnable(0x20, 20);
+            prvBeepEnable(0x20, 10);
             GPSET(DOUT0);
-            // GPSET(DOUT1);
             xTimerChangePeriod(xTimerPulse0, PERIOD, 0);
-            // xTimerChangePeriod(xTimerPhase, PERIOD * 2, 0);
+            xTimerChangePeriod(xTimerPhase1, PERIOD / 2, 0);
+        }
+        if (key_down == OB_CLICK || key_down == OB_DURINGLONGPRESS)
+        {
+            prvBeepEnable(0x20, 10);
+            GPSET(DOUT1);
+            xTimerChangePeriod(xTimerPulse1, PERIOD, 0);
+            xTimerChangePeriod(xTimerPhase0, PERIOD / 2, 0);
         }
 
         meterScreen();
-
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelayUntil(&last_wake_time, toggle_interval);
     }
 }
 
 void meterScreen()
 {
-    lcd_gotoxy(0, 0);
-    lcd_Printf_P(PSTR("ch0%17u"), g_pulses0);
-    lcd_gotoxy(0, 1);
-    lcd_Printf_P(PSTR("ch1%17u"), g_pulses1);
-    lcd_gotoxy(0, 2);
-    lcd_Printf_P(PSTR("ch2%17u"), g_pulses2);
-    lcd_gotoxy(0, 3);
-    lcd_Printf_P(PSTR("ch3%17u"), g_pulses3);
-}
+    bool pin_ch0;
+    bool pin_ch1;
+    bool pin_ch2;
 
-static void TaskModbus(void *pvParameters)
-{
-    for (;;)
-    {
-        vTaskDelay(1);
-        modbusTickTimer();
-        if (modbusGetBusState() & (1 << ReceiveCompleted))
-        {
-            switch (rxbuffer[1])
-            {
-            case fcReadHoldingRegisters:
-                modbusExchangeRegisters(holdingRegisters, 0, REG_COUNT);
-                break;
-            case fcReadInputRegisters:
-                modbusExchangeRegisters(inputRegisters, 0, REG_COUNT);
-                break;
-            case fcPresetSingleRegister:
-                modbusExchangeRegisters(holdingRegisters, 0, REG_COUNT);
-                break;
-            case fcPresetMultipleRegisters:
-                modbusExchangeRegisters(holdingRegisters, 0, REG_COUNT);
-                break;
-            default:
-                modbusSendException(ecIllegalFunction);
-                break;
-            }
-        }
-    }
+    pin_ch0 = GPREAD(COUNT1);
+    pin_ch1 = GPREAD(COUNT2);
+    pin_ch2 = GPREAD(TP7);
+
+    lcd_gotoxy(0, 0);
+    lcd_Printf_P(PSTR("ch0:%6u%10lu"), pin_ch0, g_pulses0);
+    lcd_gotoxy(0, 1);
+    lcd_Printf_P(PSTR("ch1:%6u%10lu"), pin_ch1, g_pulses1);
+    lcd_gotoxy(0, 2);
+    lcd_Printf_P(PSTR("ch2:%6u%10lu"), pin_ch2, g_pulses2);
+    // lcd_gotoxy(0, 3);
+    // lcd_Printf_P(PSTR("OCR1C:%14u"), OCR1C);
 }
-/*-----------------------------------------------------------*/
 
 // beep function
 void prvBeepEnable(BaseType_t tone, uint16_t duration)
@@ -231,9 +222,17 @@ void prvBeepDisable(TimerHandle_t xTimer)
     TCCR0 &= ~(1 << COM00); // disable OC0 output
 }
 /*-----------------------------------------------------------*/
+
 void prvPulse0Callback(TimerHandle_t xTimer)
 {
     GPCLEAR(DOUT0);
+}
+/*-----------------------------------------------------------*/
+
+void prvPhase0Callback(TimerHandle_t xTimer)
+{
+    GPSET(DOUT0);
+    xTimerChangePeriod(xTimerPulse0, PERIOD, 0);
 }
 /*-----------------------------------------------------------*/
 
@@ -243,7 +242,7 @@ void prvPulse1Callback(TimerHandle_t xTimer)
 }
 /*-----------------------------------------------------------*/
 
-void prvPhaseCallback(TimerHandle_t xTimer)
+void prvPhase1Callback(TimerHandle_t xTimer)
 {
     GPSET(DOUT1);
     xTimerChangePeriod(xTimerPulse1, PERIOD, 0);
@@ -257,8 +256,11 @@ static void boardInit(void)
     TCCR0 = _BV(WGM01) | _BV(CS01) | _BV(CS00); // CTC, prescaler 32
 
     // timer1 setup
-    TCCR1A = (1 << WGM11) | (1 << COM1B1);
-    TCCR1B = (1 << CS10) | (1 << CS11);
+    // TCCR1A = (1 << COM1C1);
+    // TCCR1A = (1 << COM1B1) | (1 << COM1C1);
+    // TCCR1B = (1 << WGM13) | (1 << CS10);
+
+    // ICR1 = 10000;
 
     OCR1A = 0x0100; // set PWM value - DOUT1
     OCR1B = 0x0140; // LCD Contrast set PWM value
@@ -275,7 +277,7 @@ static void boardInit(void)
     DDRB = GPBV(BUZZER) | GPBV(LCD_CON) | GPBV(DOUT0) | GPBV(DOUT1);
     DDRC = 0; // all inputs
     DDRD = GPBV(DOUT2);
-    DDRE |= GPBV(DLED) | GPBV(TP7);
+    DDRE |= GPBV(DLED);
     DDRG |= GPBV(LCD_BL) | GPBV(VMOTOR);
     DDRF = GPBV(SENSOR_MODE);
 
@@ -283,12 +285,12 @@ static void boardInit(void)
     GPSET(LCD_BL);
 
     // Analog comparator configuration. Comparator Interrupt on falling edge
-    ACSR = (1 << ACBG) | (1 << ACIE) | (1 << ACIS1); // Analog comparator configuration. Comparator Interrupt on falling edge
+    ACSR = (1 << ACBG) | (1 << ACIE) | (1 << ACIS1) | (1 << ACIS0); // Analog comparator configuration. Comparator Interrupt on falling edge
 
     // interrupts setup
-    EICRB = _BV(ISC71);  // INT7 falling edge mode
-    EIMSK = _BV(INT7);   // enable INT7 interrupt
-    ETIMSK = _BV(TOIE3); // enable timer3 overflow interrupt
+    EICRB = (1 << ISC71) | (1 << ISC61); // INT7 INT6 falling edge mode
+    EIMSK = (1 << INT7) | (1 << INT6);   // enable INT7 INT6 interrupt
+    ETIMSK = (1 << TOIE3);               // enable timer3 overflow interrupt
 
     // blink led - we alive
     for (uint8_t i = 0; i < 3; i++)
@@ -321,6 +323,13 @@ ISR(INT7_vect)
     g_period = g_period + tcnt16 + g_periodH * 0x010000L;
     g_pulses0++;
     g_periodH = 0;
+}
+/*-----------------------------------------------------------*/
+
+// INT6 interrupt
+ISR(INT6_vect)
+{
+    g_pulses2++;
 }
 /*-----------------------------------------------------------*/
 
