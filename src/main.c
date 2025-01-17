@@ -68,7 +68,9 @@ volatile uint32_t g_pulses2;
 volatile uint32_t g_pulses3;
 
 TimerHandle_t xTimerBeep;
-TimerHandle_t xTimerPulse;
+TimerHandle_t xTimerPulse0;
+TimerHandle_t xTimerPulse1;
+TimerHandle_t xTimerPhase;
 
 static void TaskPollButton(void *pvParameters);
 static void TaskModbus(void *pvParameters);
@@ -77,7 +79,9 @@ static void deadBeef(void);
 
 void prvBeepEnable(BaseType_t tone, uint16_t duration);
 void prvBeepDisable(TimerHandle_t xTimer);
-void prvPulseEnd(TimerHandle_t xTimer);
+void prvPulse0Callback(TimerHandle_t xTimer);
+void prvPulse1Callback(TimerHandle_t xTimer);
+void prvPhaseCallback(TimerHandle_t xTimer);
 
 void meterScreen();
 
@@ -118,11 +122,13 @@ int main(void)
     // if (xQueueMeter == NULL)
     // deadBeef();
     xTimerBeep = xTimerCreate(PSTR("Beep"), pdMS_TO_TICKS(10), pdFALSE, 0, prvBeepDisable);
-    xTimerPulse = xTimerCreate(PSTR("Pulse"), pdMS_TO_TICKS(10), pdFALSE, 0, prvPulseEnd);
+    xTimerPulse0 = xTimerCreate(PSTR("Pulse0"), pdMS_TO_TICKS(10), pdFALSE, 0, prvPulse0Callback);
+    xTimerPulse1 = xTimerCreate(PSTR("Pulse1"), pdMS_TO_TICKS(10), pdFALSE, 0, prvPulse1Callback);
+    xTimerPhase = xTimerCreate(PSTR("Phase"), pdMS_TO_TICKS(10), pdFALSE, 0, prvPhaseCallback);
 
     xTaskCreate(TaskPollButton, (const char *)"PollButton", 256, NULL, 2, NULL); // Tested 9 free @ 208
     // xTaskCreate(TaskMeter, (const char *)"Count", 256, NULL, 1, NULL);           // Tested 9 free @ 208
-    xTaskCreate(TaskModbus, (const char *)"TaskModbus", 256, NULL, 1, NULL); // Tested 9 free @ 208
+    // xTaskCreate(TaskModbus, (const char *)"TaskModbus", 256, NULL, 1, NULL); // Tested 9 free @ 208
 
     vTaskStartScheduler();
     deadBeef();
@@ -134,7 +140,9 @@ static void TaskPollButton(void *pvParameters)
     uint8_t key_enter;
     uint8_t key_down;
     uint8_t key_up;
+    TickType_t PERIOD;
 
+#define PERIOD pdMS_TO_TICKS(100)
     for (;;)
     {
         // GPTOGGLE(GPE5);
@@ -154,7 +162,9 @@ static void TaskPollButton(void *pvParameters)
         {
             prvBeepEnable(0x20, 20);
             GPSET(DOUT0);
-            xTimerChangePeriod(xTimerPulse, pdMS_TO_TICKS(20), 0);
+            // GPSET(DOUT1);
+            xTimerChangePeriod(xTimerPulse0, PERIOD, 0);
+            // xTimerChangePeriod(xTimerPhase, PERIOD * 2, 0);
         }
 
         meterScreen();
@@ -221,9 +231,22 @@ void prvBeepDisable(TimerHandle_t xTimer)
     TCCR0 &= ~(1 << COM00); // disable OC0 output
 }
 /*-----------------------------------------------------------*/
-void prvPulseEnd(TimerHandle_t xTimer)
+void prvPulse0Callback(TimerHandle_t xTimer)
 {
     GPCLEAR(DOUT0);
+}
+/*-----------------------------------------------------------*/
+
+void prvPulse1Callback(TimerHandle_t xTimer)
+{
+    GPCLEAR(DOUT1);
+}
+/*-----------------------------------------------------------*/
+
+void prvPhaseCallback(TimerHandle_t xTimer)
+{
+    GPSET(DOUT1);
+    xTimerChangePeriod(xTimerPulse1, PERIOD, 0);
 }
 /*-----------------------------------------------------------*/
 
