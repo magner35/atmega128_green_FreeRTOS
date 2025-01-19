@@ -198,11 +198,11 @@ void meterScreen()
     pin_ch2 = GPREAD(TP7);
 
     lcd_gotoxy(0, 0);
-    lcd_Printf_P(PSTR("ch0:%6u%10lu"), pin_ch0, g_pulses0);
+    lcd_Printf_P(PSTR("ch0:%s  %10lu"), pin_ch0 ? "HIGH" : "LOW ", g_pulses0);
     lcd_gotoxy(0, 1);
-    lcd_Printf_P(PSTR("ch1:%6u%10lu"), pin_ch1, g_pulses1);
+    lcd_Printf_P(PSTR("ch1:%s  %10lu"), pin_ch1 ? "HIGH" : "LOW ", g_pulses1);
     lcd_gotoxy(0, 2);
-    lcd_Printf_P(PSTR("ch2:%6u%10lu"), pin_ch2, g_pulses2);
+    lcd_Printf_P(PSTR("ch2:%s  %10lu"), pin_ch2 ? "HIGH" : "LOW ", g_pulses2);
     // lcd_gotoxy(0, 3);
     // lcd_Printf_P(PSTR("OCR1C:%14u"), OCR1C);
 }
