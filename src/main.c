@@ -169,14 +169,14 @@ static void TaskPollButton(void *pvParameters)
         }
         if (key_up == OB_CLICK || key_up == OB_DURINGLONGPRESS)
         {
-            prvBeepEnable(0x20, 10);
+            prvBeepEnable(0x10, 4);
             GPSET(DOUT0);
             xTimerChangePeriod(xTimerPulse0, PERIOD, 0);
             xTimerChangePeriod(xTimerPhase1, PERIOD / 2, 0);
         }
         if (key_down == OB_CLICK || key_down == OB_DURINGLONGPRESS)
         {
-            prvBeepEnable(0x20, 10);
+            prvBeepEnable(0x10, 4);
             GPSET(DOUT1);
             xTimerChangePeriod(xTimerPulse1, PERIOD, 0);
             xTimerChangePeriod(xTimerPhase0, PERIOD / 2, 0);
